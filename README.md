@@ -7,7 +7,7 @@ PERIDOTコンフィグレーションで使用している標準ペリフェラ�
 対象となるツール
 ================
 
-PERIDOTボードおよびQsys
+[PERIDOTボード](https://github.com/osafune/peridot)およびQsys
 
 使い方
 ------
@@ -31,7 +31,7 @@ Chromeアプリでは[Canarium.js](https://github.com/osafune/peridot/tree/maste
 PERIDOT SWI
 -----------
 
-PRIDOTプロセッサ(NiosII)とホストとの排他制御や、ホストからの通知、ブートシーケンス制御の機能を提供します。  
+PERIDOTプロセッサ(NiosII)とホストとの排他制御や、ホストからの通知、ブートシーケンス制御の機能を提供します。  
 PERIDOT標準システムではQsys SystemIDペリフェラルと合わせて、PERIDOTコンフィグレーションのシステム情報ブロックを構築します。  
 
 
