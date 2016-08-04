@@ -32,7 +32,7 @@ PERIDOT SWI
 -----------
 
 PERIDOTプロセッサ(NiosII)とホストとの排他制御や、ホストからの通知、ブートシーケンス制御の機能を提供します。  
-PERIDOT標準システムではQsys SystemIDペリフェラルと合わせて、PERIDOTコンフィグレーションのシステム情報ブロックを構築します。  
+PERIDOT標準システムではPERIDOTコンフィグレーションのシステム情報ブロックを構築します。  
 
 
 PERIDOT PFC
@@ -63,4 +63,6 @@ PERIDOT標準ペリフェラルで使用されるRCサーボ用コントロー�
 ライセンス
 =========
 
-[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+[The MIT License (MIT)](https://opensource.org/licenses/MIT)
+
+Copyright (c) 2013-2016 J-7SYSTEM WORKS LIMITED.

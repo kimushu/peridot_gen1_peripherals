@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ip>
- <presets version="12.1">
+ <presets version="15.1">
   <preset
      name="single Alliance AS4C4M16S-7"
      kind="altera_avalon_new_sdram_controller"

@@ -4,7 +4,7 @@
 
 
 # 
-# peridot_swi "PERIDOT SWI" v1.0
+# peridot_swi "PERIDOT SWI" v1.1
 #  2015.05.19.06:14:06
 # 
 # 
@@ -20,10 +20,10 @@ package require -exact qsys 15.0
 # 
 set_module_property DESCRIPTION ""
 set_module_property NAME peridot_swi
-set_module_property VERSION 1.0
+set_module_property VERSION 1.1
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
-set_module_property AUTHOR ""
+set_module_property AUTHOR "J-7SYSTEM WORKS LIMITED"
 set_module_property DISPLAY_NAME "PERIDOT SWI"
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
 set_module_property EDITABLE true
@@ -42,22 +42,53 @@ set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
 add_fileset_file peridot_swi.v VERILOG PATH peridot_swi.v TOP_LEVEL_FILE
 add_fileset_file peridot_spi.v VERILOG PATH peridot_spi.v
+add_fileset_file altchip_id.v VERILOG PATH altchip_id.v
 
 
 # 
 # parameters
 # 
+add_parameter CLASSID INTEGER 0x72A00000
+set_parameter_property CLASSID DISPLAY_NAME "32 bit Class ID"
+set_parameter_property CLASSID HDL_PARAMETER true
+
+add_parameter TIMECODE INTEGER 0
+set_parameter_property TIMECODE DISPLAY_NAME "Time code"
+set_parameter_property TIMECODE HDL_PARAMETER true
+set_parameter_property TIMECODE SYSTEM_INFO {GENERATION_ID}
+set_parameter_property TIMECODE ENABLED false
+set_parameter_property TIMECODE VISIBLE false
+
 add_parameter CLOCKFREQ INTEGER 0
-set_parameter_property CLOCKFREQ TYPE INTEGER
-set_parameter_property CLOCKFREQ SYSTEM_INFO {CLOCK_RATE clock}
 set_parameter_property CLOCKFREQ DISPLAY_NAME "Drive clock rate"
 set_parameter_property CLOCKFREQ UNITS Hertz
 set_parameter_property CLOCKFREQ HDL_PARAMETER true
+set_parameter_property CLOCKFREQ SYSTEM_INFO {CLOCK_RATE clock}
+set_parameter_property CLOCKFREQ ENABLED false
+set_parameter_property CLOCKFREQ VISIBLE false
+
+add_parameter DEVICE_FAMILY STRING ""
+set_parameter_property DEVICE_FAMILY DISPLAY_NAME "Device family"
+set_parameter_property DEVICE_FAMILY HDL_PARAMETER true
+set_parameter_property DEVICE_FAMILY SYSTEM_INFO {DEVICE_FAMILY}
+set_parameter_property DEVICE_FAMILY ENABLED false
+set_parameter_property DEVICE_FAMILY VISIBLE false
+
+add_parameter PART_NAME STRING ""
+set_parameter_property PART_NAME DISPLAY_NAME "Part number"
+set_parameter_property PART_NAME HDL_PARAMETER true
+set_parameter_property PART_NAME SYSTEM_INFO {DEVICE}
+set_parameter_property PART_NAME ENABLED false
+set_parameter_property PART_NAME VISIBLE false
 
 
 # 
 # display items
 # 
+add_display_item "" CLASSID PARAMETER  
+set_display_item_property CLASSID DISPLAY_HINT hexadecimal
+add_display_item "Description" CLASSID text "Please use hexadecimal numbers only in CLASS-ID."
+add_display_item "Information" CLOCKFREQ text "Maximum frequency of clock signal is 100MHz."
 
 
 # 
@@ -157,6 +188,7 @@ set_interface_property export CMSIS_SVD_VARIABLES ""
 set_interface_property export SVD_ADDRESS_GROUP ""
 
 add_interface_port export coe_cpureset cpureset Output 1
+add_interface_port export coe_led led Output 1
 add_interface_port export coe_cso_n cso_n Output 1
 add_interface_port export coe_dclk dclk Output 1
 add_interface_port export coe_asdo asdo Output 1
@@ -168,9 +200,27 @@ add_interface_port export coe_data0 data0 Input 1
 #
 proc validate {} {
 
+	set freq		[ format %u [get_parameter_value CLOCKFREQ] ]
+	set id			[ format %u [get_parameter_value CLASSID] ]
+	set timestamp	[ format %u [get_parameter_value TIMECODE] ]
+
 	#
 	# Software assignments for system.h
 	#
-	set_module_assignment embeddedsw.CMacro.FREQ [get_parameter_value CLOCKFREQ]
+	set_module_assignment embeddedsw.CMacro.FREQ	$freq
+	set_module_assignment embeddedsw.CMacro.ID		$id
+	set_module_assignment embeddedsw.CMacro.TIMESTAMP	$timestamp
 
+	# Device tree parameters
+	set_module_assignment embeddedsw.dts.vendor "altr"
+	set_module_assignment embeddedsw.dts.group "sysid"
+	set_module_assignment embeddedsw.dts.name "sysid"
+	set_module_assignment embeddedsw.dts.compatible "altr,sysid-1.0"
+	set_module_assignment embeddedsw.dts.params.id   $id
+	set_module_assignment embeddedsw.dts.params.timestamp   $timestamp
+
+	# Remind the user to set class id
+	send_message info "Class id is not assigned automatically. Edit the class id parameter to provide a unique number."
+	# Explain that timestamp will only be known during generation thus will not be shown
+	send_message info "Time code and clock rate will be automatically updated when this component is generated."
 }
