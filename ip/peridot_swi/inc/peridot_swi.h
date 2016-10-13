@@ -37,10 +37,11 @@ extern int peridot_swi_write_message(alt_u32 value);
 
 extern int peridot_swi_read_message(alt_u32 *value);
 
-extern int peridot_swi_flash_command(const alt_u8 *tx_data, size_t tx_len,
-                                     alt_u8 tx_filler, size_t rx_idle,
-                                     alt_u8 *rx_data, size_t rx_len,
-                                     int keep_active);
+#define PERIDOT_SWI_FLASH_COMMAND_MERGE (0x01)
+
+extern int peridot_swi_flash_command(alt_u32 write_length, const alt_u8 *write_data,
+                                     alt_u32 read_length, alt_u8 *read_data,
+                                     alt_u32 flags);
 
 #define PERIDOT_SWI_INSTANCE(name, state) \
   PERIDOT_SWI_STATE_INSTANCE(name, state)

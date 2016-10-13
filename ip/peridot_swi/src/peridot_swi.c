@@ -71,10 +71,9 @@ int peridot_swi_read_message(alt_u32 *value)
   return 0;
 }
 
-int peridot_swi_flash_command(const alt_u8 *tx_data, size_t tx_len,
-                              alt_u8 tx_filler, size_t rx_idle,
-                              alt_u8 *rx_data, size_t rx_len,
-                              int keep_active)
+int peridot_swi_flash_command(alt_u32 write_length, const alt_u8 *write_data,
+                              alt_u32 read_length, alt_u8 *read_data,
+                              alt_u32 flags)
 {
   alt_u32 base;
   alt_u32 received;
@@ -91,61 +90,35 @@ int peridot_swi_flash_command(const alt_u8 *tx_data, size_t tx_len,
 
   IOWR_PERIDOT_SWI_FLASH(base, PERIDOT_SWI_FLASH_SS_MSK);
 
-  while (tx_len > 0)
+  for (; write_length > 0; --write_length)
   {
     IOWR_PERIDOT_SWI_FLASH(base,
         PERIDOT_SWI_FLASH_SS_MSK | PERIDOT_SWI_FLASH_STA_MSK |
-        (((*tx_data++) << PERIDOT_SWI_FLASH_TXDATA_OFST) &
+        (((*write_data++) << PERIDOT_SWI_FLASH_TXDATA_OFST) &
+          PERIDOT_SWI_FLASH_TXDATA_MSK));
+
+    while ((IORD_PERIDOT_SWI_FLASH(base) & PERIDOT_SWI_FLASH_RDY_MSK) == 0);
+  }
+
+  for (; read_length > 0; --read_length)
+  {
+    IOWR_PERIDOT_SWI_FLASH(base,
+        PERIDOT_SWI_FLASH_SS_MSK | PERIDOT_SWI_FLASH_STA_MSK |
+        ((0x00 << PERIDOT_SWI_FLASH_TXDATA_OFST) &
           PERIDOT_SWI_FLASH_TXDATA_MSK));
 
     while (((received = IORD_PERIDOT_SWI_FLASH(base)) &
             PERIDOT_SWI_FLASH_RDY_MSK) == 0);
 
-    if (rx_idle > 0)
-    {
-      --rx_idle;
-    }
-    else if (rx_len > 0)
-    {
-      *rx_data++ = (received & PERIDOT_SWI_FLASH_RXDATA_MSK) >>
+    *read_data++ = (received & PERIDOT_SWI_FLASH_RXDATA_MSK) >>
                     PERIDOT_SWI_FLASH_RXDATA_OFST;
-      --rx_len;
-    }
   }
 
-  while (rx_idle > 0)
-  {
-    IOWR_PERIDOT_SWI_FLASH(base,
-        PERIDOT_SWI_FLASH_SS_MSK | PERIDOT_SWI_FLASH_STA_MSK |
-        ((tx_filler << PERIDOT_SWI_FLASH_TXDATA_OFST) &
-          PERIDOT_SWI_FLASH_TXDATA_MSK));
-
-    while ((IORD_PERIDOT_SWI_FLASH(base) &
-            PERIDOT_SWI_FLASH_RDY_MSK) == 0);
-
-    --rx_idle;
-  }
-
-  while (rx_len > 0)
-  {
-    IOWR_PERIDOT_SWI_FLASH(base,
-        PERIDOT_SWI_FLASH_SS_MSK | PERIDOT_SWI_FLASH_STA_MSK |
-        ((tx_filler << PERIDOT_SWI_FLASH_TXDATA_OFST) &
-          PERIDOT_SWI_FLASH_TXDATA_MSK));
-
-    while (((received = IORD_PERIDOT_SWI_FLASH(base)) &
-            PERIDOT_SWI_FLASH_RDY_MSK) == 0);
-
-    *rx_data++ = (received & PERIDOT_SWI_FLASH_RXDATA_MSK) >>
-                  PERIDOT_SWI_FLASH_RXDATA_OFST;
-    --rx_len;
-  }
-
-  if (!keep_active)
+  if ((flags & PERIDOT_SWI_FLASH_COMMAND_MERGE) == 0)
   {
     IOWR_PERIDOT_SWI_FLASH(base, 0);
   }
 
-  return 0;
+  return read_length;
 }
 
