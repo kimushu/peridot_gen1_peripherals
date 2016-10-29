@@ -13,7 +13,6 @@ extern "C" {
 
 typedef struct peridot_i2c_master_state_s
 {
-  struct peridot_i2c_master_state_s *next;
   const char *name;
   alt_u32 base;
   alt_u32 freq;
@@ -34,7 +33,6 @@ peridot_i2c_master_state;
 #define PERIDOT_I2C_MASTER_STATE_INSTANCE(name, state) \
   peridot_i2c_master_state state =              \
   {                                             \
-    NULL,                                       \
     #name,                                      \
     name##_BASE,                                \
     name##_FREQ,                                \
