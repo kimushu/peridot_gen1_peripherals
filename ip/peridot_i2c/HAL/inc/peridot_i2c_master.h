@@ -16,10 +16,10 @@ typedef struct peridot_i2c_master_state_s
   const char *name;
   alt_u32 base;
   alt_u32 freq;
-  alt_u8  pfc_scl_func;
-  alt_u32 pfc_scl_pins;
-  alt_u8  pfc_sda_func;
-  alt_u32 pfc_sda_pins;
+  alt_u32 irq_controller_id;
+  alt_u32 irq;
+  const struct peridot_pfc_map_s *scl_pfc_map;
+  const struct peridot_pfc_map_s *sda_pfc_map;
 #ifdef __tinythreads__
   pthread_mutex_t lock;
   sem_t done;
@@ -31,24 +31,25 @@ typedef struct peridot_i2c_master_state_s
 peridot_i2c_master_state;
 
 #define PERIDOT_I2C_MASTER_STATE_INSTANCE(name, state) \
-  peridot_i2c_master_state state =              \
-  {                                             \
-    #name,                                      \
-    name##_BASE,                                \
-    name##_FREQ,                                \
-    name##_PFC_SCL_FUNC, name##_PFC_SCL_PINS,   \
-    name##_PFC_SDA_FUNC, name##_PFC_SDA_PINS,   \
+  extern const struct peridot_pfc_map_s state##_scl_pfc_map;\
+  extern const struct peridot_pfc_map_s state##_sda_pfc_map;\
+  peridot_i2c_master_state state =      \
+  {                                     \
+    #name,                              \
+    name##_BASE,                        \
+    name##_FREQ,                        \
+    name##_IRQ_INTERRUPT_CONTROLLER_ID, \
+    name##_IRQ,                         \
+    &state##_scl_pfc_map,               \
+    &state##_sda_pfc_map,               \
   }
 
-extern void peridot_i2c_master_init(peridot_i2c_master_state *state,
-                                    alt_u32 irq_controller_id, alt_u32 irq);
+extern void peridot_i2c_master_init(peridot_i2c_master_state *state);
 
 #define PERIDOT_I2C_MASTER_STATE_INIT(name, state) \
-  peridot_i2c_master_init(                  \
-    &state,                                 \
-    name##_IRQ_INTERRUPT_CONTROLLER_ID,     \
-    name##_IRQ                              \
-  )
+  peridot_i2c_master_init(&state)
+
+extern int peridot_i2c_master_configure_pins(peridot_i2c_master_state *sp, alt_u32 scl, alt_u32 sda, int dry_run);
 
 extern int peridot_i2c_master_get_clkdiv(peridot_i2c_master_state *sp, alt_u32 bitrate, alt_u32 *clkdiv);
 

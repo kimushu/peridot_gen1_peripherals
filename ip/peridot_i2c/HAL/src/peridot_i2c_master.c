@@ -3,6 +3,7 @@
 #include "sys/alt_irq.h"
 #include "peridot_i2c_master.h"
 #include "peridot_i2c_regs.h"
+#include "peridot_pfc_interface.h"
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
 static void peridot_i2c_master_irq(void *context)
@@ -12,6 +13,7 @@ static void peridot_i2c_master_irq(void *context, alt_u32 id)
 {
   peridot_i2c_master_state *sp = (peridot_i2c_master_state *)context;
 
+  alt_ic_irq_disable(sp->irq_controller_id, sp->irq);
 #ifdef __tinythreads__
   sem_post(&sp->done);
 #else
@@ -19,8 +21,7 @@ static void peridot_i2c_master_irq(void *context, alt_u32 id)
 #endif
 }
 
-void peridot_i2c_master_init(peridot_i2c_master_state *sp,
-                             alt_u32 irq_controller_id, alt_u32 irq)
+void peridot_i2c_master_init(peridot_i2c_master_state *sp)
 {
 #ifdef __tinythreads__
   pthread_mutex_init(&sp->lock, NULL);
@@ -30,6 +31,13 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp,
   sp->done = 0;
 #endif
 
+  /* Enable reset */
+  IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_RST_MSK | PERIDOT_I2C_CONFIG_CLKDIV_MSK);
+
+  /* Connect inputs to '1' */
+  peridot_pfc_interface_select_input(sp->scl_pfc_map->in_bank, sp->scl_pfc_map->in_func, 1);
+  peridot_pfc_interface_select_input(sp->sda_pfc_map->in_bank, sp->sda_pfc_map->in_func, 1);
+
   /* Clear reset */
   IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_CLKDIV_MSK);
 
@@ -37,11 +45,45 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp,
   while ((IORD_PERIDOT_I2C_ACCESS(sp->base) & PERIDOT_I2C_ACCESS_RDY_MSK) == 0);
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
-  alt_ic_isr_register(irq_controller_id, irq, peridot_i2c_master_irq, sp, NULL);
+  alt_ic_isr_register(sp->irq_controller_id, sp->irq, peridot_i2c_master_irq, sp, NULL);
 #else
-  (void)irq_controller_id;
-  alt_irq_register(irq, sp, peridot_i2c_master_irq);
+  alt_irq_register(sp->irq, sp, peridot_i2c_master_irq);
 #endif
+}
+
+int peridot_i2c_master_configure_pins(peridot_i2c_master_state *sp,
+                                      alt_u32 scl, alt_u32 sda, int dry_run)
+{
+  const peridot_pfc_map *const scl_pfc_map = sp->scl_pfc_map;
+  const peridot_pfc_map *const sda_pfc_map = sp->sda_pfc_map;
+
+  if ((scl < sizeof(scl_pfc_map->out_funcs)) &&
+      (scl_pfc_map->in_bank >= 0) &&
+      (scl_pfc_map->in_func >= 0) &&
+      (scl < sizeof(scl_pfc_map->in_pins)) &&
+      (sda < sizeof(sda_pfc_map->out_funcs)) &&
+      (sda_pfc_map->in_bank >= 0) &&
+      (sda_pfc_map->in_func >= 0) &&
+      (sda < sizeof(sda_pfc_map->in_pins)))
+  {
+    alt_8 scl_func = scl_pfc_map->out_funcs[scl];
+    alt_8 scl_pin = scl_pfc_map->in_pins[scl];
+    alt_8 sda_func = sda_pfc_map->out_funcs[sda];
+    alt_8 sda_pin = sda_pfc_map->in_pins[sda];
+    if ((scl_func >= 0) && (scl_pin >= 0) &&
+        (sda_func >= 0) && (sda_pin >= 0))
+    {
+      if (!dry_run)
+      {
+        peridot_pfc_interface_select_output(scl, scl_func);
+        peridot_pfc_interface_select_input(scl_pfc_map->in_bank, scl_pfc_map->in_func, scl_pin);
+        peridot_pfc_interface_select_output(sda, sda_func);
+        peridot_pfc_interface_select_input(sda_pfc_map->in_bank, sda_pfc_map->in_func, sda_pin);
+      }
+      return 0;
+    }
+  }
+  return -ENOTSUP;
 }
 
 int peridot_i2c_master_get_clkdiv(peridot_i2c_master_state *sp, alt_u32 bitrate, alt_u32 *clkdiv)
@@ -61,6 +103,8 @@ static alt_u32 wait(peridot_i2c_master_state *sp)
 {
   alt_u32 resp;
 
+  alt_ic_irq_enable(sp->irq_controller_id, sp->irq);
+
   do
   {
 #ifdef __tinythreads__
@@ -69,7 +113,7 @@ static alt_u32 wait(peridot_i2c_master_state *sp)
     while (!sp->done);
 #endif
   }
-  while (((resp = IORD_PERIDOT_I2C_CONFIG(sp->base)) &
+  while (((resp = IORD_PERIDOT_I2C_ACCESS(sp->base)) &
           PERIDOT_I2C_ACCESS_RDY_MSK) == 0);
 
   return resp;
