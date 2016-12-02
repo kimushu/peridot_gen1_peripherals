@@ -1,7 +1,9 @@
 #ifndef __PERIDOT_SWI_REGS_H__
 #define __PERIDOT_SWI_REGS_H__
 
+#ifndef __ASSEMBLER__
 #include <io.h>
+#endif
 
 /* CLASSID register (compatible with altera_avalon_sysid_qsys) */
 #define PERIDOT_SWI_CLASSID_REG             0
