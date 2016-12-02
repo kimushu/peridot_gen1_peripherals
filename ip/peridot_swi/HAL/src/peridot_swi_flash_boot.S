@@ -105,6 +105,7 @@
 99:	ldwio	r_temp, 0(r_spim_base)
 	andi	r_temp, r_temp, PERIDOT_SWI_FLASH_RDY_MSK
 	beq		r_temp, r_zero, 99b
+	ldwio	r_temp, 0(r_spim_base)
 	andi	\rRX, r_temp, PERIDOT_SWI_FLASH_RXDATA_MSK
 .endm
 
@@ -130,17 +131,17 @@ __reset_swi:
 	movhi	r1, %hi(__loader)
 	ori		r1, r1, %lo(__loader)
 	jmp		r1
-#else
+#else   /* SWI_FLASH_BOOT_ENABLE */
 	movhi	r1, %hi(_start)
 	ori		r1, r1, %lo(_start)
 	jmp		r1
-#endif
-	.long	__loader
+#endif  /* !SWI_FLASH_BOOT_ENABLE */
 
 /*----------------------------------------------------------------
  * Boot loader
  */
 
+#ifdef SWI_FLASH_BOOT_ENABLE
 	.section .loader, "xa"
 	.align 2
 
@@ -288,14 +289,14 @@ load_program_header:
 	MOVI32	r_temp, PT_LOAD
 	bne		r_temp, r_p_type, next_program_header
 
-	// Load uncompressed data (Must be 4-byte aligned)
+	/* Load uncompressed data (Must be 4-byte aligned) */
 1:	RCALL	flash_txrx_word
 	stw		r_spim_read, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 4
 	bltu	r_p_paddr, r_paddr_fend, 1b
 	br		fill_remainder_area
 
-	// Fill remainder area (Must be 4-byte aligned)
+	/* Fill remainder area (Must be 4-byte aligned) */
 1:	stw		r_zero, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 4
 fill_remainder_area:
@@ -308,13 +309,13 @@ next_program_header:
 	bne		r_e_phnum, r_zero, load_program_header
 
 start_program:
-	// Flush all data cache
+	/* Flush all data cache */
 	MOVI32	r_temp, NIOS2_DCACHE_SIZE
 1:	addi	r_temp, r_temp, -32
 	flushd	0(r_temp)
 	bne		r_temp, r_zero, 1b
 
-	// Flush all instruction cache
+	/* Flush all instruction cache */
 	MOVI32	r_temp, NIOS2_ICACHE_SIZE
 1:	addi	r_temp, r_temp, -32
 	flushi	r_temp
@@ -336,29 +337,29 @@ decompress_lzss:
 #define r_lz4_match		r15
 #define r_lz4_window	r16
 decompress_lz4:
-	// Initialize constants
+	/* Initialize constants */
 	MOVI32	r_lz4_255, 255
 	MOVI32	r_lz4_15, 15
-1:	// Read token
+1:	/* Read token */
 	RCALL	flash_txrx_byte
-	// Read literal length
+	/* Read literal length */
 	srli	r_lz4_lit, r_temp, 4
-	// Read match length (-4)
+	/* Read match length (-4) */
 	and		r_lz4_match, r_temp, r_lz4_15
 	bne		r_lz4_lit, r_lz4_15, 3f
-2:	// Read additional literal length
+2:	/* Read additional literal length */
 	RCALL	flash_txrx_byte
 	add		r_lz4_lit, r_lz4_lit, r_temp
 	beq		r_temp, r_lz4_255, 2b
-3:	// Read literal
+3:	/* Read literal */
 	add		r_lz4_lit, r_lz4_lit, r_p_paddr
 	beq		r_p_paddr, r_lz4_lit, 5f
 4:	RCALL	flash_txrx_byte
 	stb		r_temp, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 1
 	bltu	r_p_paddr, r_lz4_lit, 4b
-5:	// Read offset and calc window position
-	// (if offset == 0, stop decompressing)
+5:	/* Read offset and calc window position */
+	/* (if offset == 0, stop decompressing) */
 	RCALL	flash_txrx_byte
 	sub		r_lz4_window, r_p_paddr, r_temp
 	RCALL	flash_txrx_byte
@@ -366,13 +367,13 @@ decompress_lz4:
 	sub		r_lz4_window, r_lz4_window, r_temp
 	beq		r_lz4_window, r_p_paddr, fill_remainder_area
 	bne		r_lz4_match, r_lz4_15, 7f
-6:	// Read additional match length
+6:	/* Read additional match length */
 	RCALL	flash_txrx_byte
 	add		r_lz4_match, r_lz4_match, r_temp
 	beq		r_temp, r_lz4_255, 6b
-7:	// Adjust match length
+7:	/* Adjust match length */
 	addi	r_lz4_match, r_lz4_match, 4
-	// Output matched data
+	/* Output matched data */
 	add		r_lz4_match, r_lz4_match, r_lz4_window
 8:	ldbu	r_temp, 0(r_lz4_window)
 	stb		r_temp, 0(r_p_paddr)
@@ -429,22 +430,23 @@ flash_txrx_byte:
  *   Output: r_spim_read (0b00000000_00000000_00000000_0000ABCD)
  */
 extract_bit5s:
-# xxAxxxxxxxBxxxxxxxCxxxxxxxDxxxxx (r_spim_read)
+	/* xxAxxxxxxxBxxxxxxxCxxxxxxxDxxxxx (r_spim_read) */
 	ori		r_spim_read, r_spim_read, 0xdfdf
 	orhi	r_spim_read, r_spim_read, 0xdfdf
-# 11A1111111B1111111C1111111D11111 (r_spim_read)
+	/* 11A1111111B1111111C1111111D11111 (r_spim_read) */
 	srli	r_temp, r_spim_read, 7
-# 000011111A1111111B1111111C111111 (r_temp)
+	/* 000011111A1111111B1111111C111111 (r_temp) */
 	and		r_temp, r_temp, r_spim_read
-# 000011111AB111111BC111111CD11111 (r_temp)
+	/* 000011111AB111111BC111111CD11111 (r_temp) */
 	srli	r_spim_read, r_temp, 14
-# 00000000000000000011111AB1111111 (r_spim_read)
+	/* 00000000000000000011111AB1111111 (r_spim_read) */
 	and		r_temp, r_temp, r_spim_read
-# 000000000000000000C1111ABCD11111 (r_temp)
+	/* 000000000000000000C1111ABCD11111 (r_temp) */
 	srli	r_temp, r_temp, 5
 	andi	r_spim_read, r_temp, 0xf
-# 0000000000000000000000000000ABCD (r_spim_read)
+	/* 0000000000000000000000000000ABCD (r_spim_read) */
 	RRET
-#endif	/* SWI_FLASH_BOOT_AFTER_CFG */
+#endif  /* SWI_FLASH_BOOT_AFTER_CFG */
 
+#endif  /* SWI_FLASH_BOOT_ENABLE */
 #endif  /* !ALT_ALLOW_CODE_AT_RESET */
