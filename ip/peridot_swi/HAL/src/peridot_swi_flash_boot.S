@@ -156,6 +156,14 @@ __loader:
 
 	RCALL	flash_close
 
+	/* Wait for EPCS ready */
+1:	MOVI32	r_spim_write, (CMD_READ_DEVICE_ID * 0x01010101)
+	RCALL	flash_txrx_word
+	RCALL	flash_close
+	MOVI32	r_temp, 0xff000000
+	and		r_spim_read, r_spim_read, r_temp
+	beq		r_spim_read, r_temp, 1b
+
 #if !defined(SWI_FLASH_BOOT_AFTER_CFG)
 	/*
 	 * ELF image is located at the fixed position
