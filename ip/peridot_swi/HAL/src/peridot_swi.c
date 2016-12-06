@@ -9,7 +9,7 @@ static peridot_swi_state *swi_sp;
 #ifndef ALT_ALLOW_CODE_AT_RESET
 /* This dummy variable prevents linker from dropping startup sections */
 extern int __reset_swi;
-static const void *peridot_swi_dummy = &__reset_swi;
+__attribute__((used)) static const void *peridot_swi_dummy = &__reset_swi;
 #endif
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT

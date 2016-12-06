@@ -1,6 +1,10 @@
 #include "system.h"
 #include "peridot_swi_regs.h"
-#ifndef ALT_ALLOW_CODE_AT_RESET
+#ifdef ALT_ALLOW_CODE_AT_RESET
+#ifdef SWI_FLASH_BOOT_ENABLE
+# error "You have to turn off hal.linker.allow_code_at_reset to use SWI flash boot"
+#endif  /* SWI_FLASH_BOOT_ENABLE */
+#else   /* ALT_ALLOW_CODE_AT_RESET */
 
 /*----------------------------------------------------------------
  * Register usage map
@@ -142,7 +146,7 @@ __reset_swi:
  */
 
 #ifdef SWI_FLASH_BOOT_ENABLE
-	.section .loader, "xa"
+	.section .ipl, "xa"
 	.align 2
 
 	.global __loader
@@ -455,6 +459,8 @@ extract_bit5s:
 	/* 0000000000000000000000000000ABCD (r_spim_read) */
 	RRET
 #endif  /* SWI_FLASH_BOOT_AFTER_CFG */
+
+	.long	_alt_partition_ipl_start
 
 #endif  /* SWI_FLASH_BOOT_ENABLE */
 #endif  /* !ALT_ALLOW_CODE_AT_RESET */
