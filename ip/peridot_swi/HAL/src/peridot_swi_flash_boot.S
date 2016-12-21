@@ -13,25 +13,27 @@
 .set noat
 #define r_zero			r0
 #define r_temp			r1	/* Temporary */
-#define r_return		r2	/* Used in RCALL, RRET */
-#define r_spim_base		r3	/* Base of EPCS/SPImaster controller */
-#define r_elf_base		r4	/* Base of ELF data */
-#define r_opt_count		r5	/* SOF option bit count */
-#define r_elf_magic		r5	/* ELF header magic */
-#define r_e_entry		r5	/* (e_entry) */
-#define r_e_phoff		r6	/* (e_phoff) */
-#define r_e_phentsize	r7	/* (e_phentsize) */
-#define r_e_phnum		r8	/* (e_phnum) */
-#define r_p_paddr		r9	/* (p_paddr) */
-#define r_paddr_fend	r10	/* (p_paddr + p_filesz) */
-#define r_paddr_mend	r11	/* (p_paddr + p_memsz) */
-#define r_spim_count	r12	/* Used in flash_txrx_word */
-#define r_spim_read		r13	/* Used in flash_txrx_word */
-#define r_spim_write	r14	/* Used in flash_txrx_word */
-#define r_p_type		r15	/* (p_type) */
+#define r_spim_base		r2	/* Base of EPCS/SPImaster controller */
+#define r_flash_byte	r3	/* Function for flash byte transfer */
+#define r_flash_word	r4	/* Function for flash word transfer */
+#define r_elf_base		r5	/* Base of ELF data */
+#define r_opt_count		r6	/* SOF option bit count */
+#define r_elf_magic		r6	/* ELF header magic */
+#define r_e_entry		r6	/* (e_entry) */
+#define r_e_phoff		r7	/* (e_phoff) */
+#define r_e_phentsize	r8	/* (e_phentsize) */
+#define r_e_phnum		r9	/* (e_phnum) */
+#define r_p_paddr		r10	/* (p_paddr) */
+#define r_paddr_fend	r11	/* (p_paddr + p_filesz) */
+#define r_paddr_mend	r12	/* (p_paddr + p_memsz) */
+#define r_spim_count	r13	/* Used in flash_txrx_word */
+#define r_spim_read		r14	/* Used in flash_txrx_word */
+#define r_spim_write	r15	/* Used in flash_txrx_word */
+
+#define r_p_type		r16	/* (p_type) */
 /*
- * r15-r31 : Free area for decompressor
- * (If decompressor does not use flash_txrx_word, r12-r14 are also free)
+ * r16-r30 : Free area for decompressor
+ * (If decompressor does not use flash_txrx_word, r13-r15 are also free)
  */
 
 /*----------------------------------------------------------------
@@ -75,17 +77,9 @@
  *   Syntax: RCALL label
  */
 .macro RCALL label
-	nextpc	r_return
+	nextpc	ra
+	addi	ra, ra, 8
 	br		\label
-.endm
-
-/*
- * Return for RCALL
- *   Syntax: RRET
- */
-.macro RRET
-	addi	r_return, r_return, 4
-	jmp		r_return
 .endm
 
 /*
@@ -168,11 +162,16 @@ __loader:
 	/* Get register base */
 	MOVI32	r_spim_base, (SWI_BASE + PERIDOT_SWI_FLASH_REG * 4)
 
+	/* Calculate function pointers */
+	nextpc	r_temp
+1:	addi	r_flash_byte, r_temp, (flash_txrx_byte - 1b)
+	addi	r_flash_word, r_temp, (flash_txrx_word - 1b)
+
 	RCALL	flash_close
 
 	/* Wait for EPCS ready */
 1:	MOVI32	r_spim_write, (CMD_READ_DEVICE_ID * 0x01010101)
-	RCALL	flash_txrx_word
+	callr	r_flash_word
 	RCALL	flash_close
 	MOVI32	r_temp, 0xff000000
 	and		r_spim_read, r_spim_read, r_temp
@@ -187,8 +186,8 @@ __loader:
 	/* Check ELF header (e_ident) */
 	MOVI32	r_elf_base, SWI_FLASH_BOOT_OFFSET | (CMD_READ_BYTES << 24)
 	mov		r_spim_write, r_elf_base
-	RCALL	flash_txrx_word
-	RCALL	flash_txrx_word
+	callr	r_flash_word
+	callr	r_flash_word
 	RCALL	flash_close
 	MOVI32	r_elf_magic, ELF_HEADER_LE
 	bne		r_spim_read, r_elf_magic, halt
@@ -212,22 +211,22 @@ __loader:
 	 * r_elf_base <= 0b0000_7654_3210_9876_5432_1098_7654_3210 rotate
 	 */
 	MOVI32	r_spim_write, ((CMD_READ_BYTES << 24) + 33)
-	RCALL	flash_txrx_word
-	RCALL	flash_txrx_word
+	callr	r_flash_word
+	callr	r_flash_word
 	slli	r_spim_read, r_spim_read, 1
 	RCALL	extract_bit5s
 	slli	r_elf_base, r_spim_read, 29	/* set27_25 */
 	RCALL	flash_close
 	MOVI32	r_spim_write, ((CMD_READ_BYTES << 24) + 48)
-	RCALL	flash_txrx_word
+	callr	r_flash_word
 	MOVI32	r_opt_count, 6
-1:	RCALL	flash_txrx_word
+1:	callr	r_flash_word
 	RCALL	extract_bit5s
 	roli	r_elf_base, r_elf_base, (32-4)
 	or		r_elf_base, r_elf_base, r_spim_read	/* loop[r_opt_count] */
 	subi	r_opt_count, r_opt_count, 1
 	bne		r_opt_count, r_zero, 1b
-	RCALL	flash_txrx_word
+	callr	r_flash_word
 	RCALL	flash_close
 	srli	r_temp, r_spim_read, 1
 	andi	r_temp, r_temp, 0x0010
@@ -245,15 +244,15 @@ __loader:
 	 */
 	orhi	r_elf_base, r_elf_base, %hi(CMD_READ_BYTES << 24)
 	mov		r_spim_write, r_elf_base
-	RCALL	flash_txrx_word
-	RCALL	flash_txrx_word
+	callr	r_flash_word
+	callr	r_flash_word
 	RCALL	flash_close
 	MOVI32	r_elf_magic, ELF_HEADER_LE
 	beq		r_spim_read, r_elf_magic, 1f
 	addi	r_elf_base, r_elf_base, 1
 	mov		r_spim_write, r_elf_base
-	RCALL	flash_txrx_word
-	RCALL	flash_txrx_word
+	callr	r_flash_word
+	callr	r_flash_word
 	RCALL	flash_close
 	bne		r_spim_read, r_elf_magic, halt
 1:
@@ -261,45 +260,45 @@ __loader:
 
 	/* Check e_type and e_machine */
 	addi	r_spim_write, r_elf_base, 16	/* offsetof(Elf32_ehdr, e_type) */
-	RCALL	flash_txrx_word
-	RCALL	flash_txrx_word
+	callr	r_flash_word
+	callr	r_flash_word
 	MOVI32	r_temp, (ET_EXEC | (EM_NIOS2 << 16))
 	bne		r_spim_read, r_temp, halt
 
 	/* Read e_entry, e_phoff, e_phentsize and e_phnum */
-	RCALL	flash_txrx_word			/* e_version */
-	RCALL	flash_txrx_word			/* e_entry */
+	callr	r_flash_word			/* e_version */
+	callr	r_flash_word			/* e_entry */
 	mov		r_e_entry, r_spim_read
-	RCALL	flash_txrx_word			/* e_phoff */
+	callr	r_flash_word			/* e_phoff */
 	add		r_e_phoff, r_elf_base, r_spim_read
-	RCALL	flash_txrx_word			/* e_shoff */
-	RCALL	flash_txrx_word			/* e_flags */
-	RCALL	flash_txrx_word			/* lo16:e_ehsize, hi16:e_phentsize */
+	callr	r_flash_word			/* e_shoff */
+	callr	r_flash_word			/* e_flags */
+	callr	r_flash_word			/* lo16:e_ehsize, hi16:e_phentsize */
 	srli	r_e_phentsize, r_spim_read, 16
-	RCALL	flash_txrx_word			/* lo16:e_phnum, hi16:e_shentsize */
+	callr	r_flash_word			/* lo16:e_phnum, hi16:e_shentsize */
 	andi	r_e_phnum, r_spim_read, 0xffff
 	RCALL	flash_close
 
 load_program_header:
 	/* Read Elf32_phdr fields */
 	mov		r_spim_write, r_e_phoff
-	RCALL	flash_txrx_word			/* opcode and address */
-	RCALL	flash_txrx_word			/* p_type */
+	callr	r_flash_word			/* opcode and address */
+	callr	r_flash_word			/* p_type */
 	mov		r_p_type, r_spim_read
-	RCALL	flash_txrx_word			/* p_offset */
+	callr	r_flash_word			/* p_offset */
 	add		r_spim_write, r_elf_base, r_spim_read
-	RCALL	flash_txrx_word			/* p_vaddr */
-	RCALL	flash_txrx_word			/* p_paddr */
+	callr	r_flash_word			/* p_vaddr */
+	callr	r_flash_word			/* p_paddr */
 	mov		r_p_paddr, r_spim_read
-	RCALL	flash_txrx_word			/* p_filesz */
+	callr	r_flash_word			/* p_filesz */
 	add		r_paddr_fend, r_p_paddr, r_spim_read
-	RCALL	flash_txrx_word			/* p_memsz */
+	callr	r_flash_word			/* p_memsz */
 	beq		r_spim_read, r_zero, next_program_header
 	add		r_paddr_mend, r_p_paddr, r_spim_read
 	beq		r_paddr_fend, r_p_paddr, fill_remainder_area
 	RCALL	flash_close
 
-	RCALL	flash_txrx_word			/* opcode and address */
+	callr	r_flash_word			/* opcode and address */
 #if defined(SWI_FLASH_BOOT_DECOMPRESS_LZ4)
 	MOVI32	r_temp, PT_LOAD_LZ4
 	beq		r_temp, r_p_type, decompress_lz4
@@ -308,7 +307,7 @@ load_program_header:
 	bne		r_temp, r_p_type, next_program_header
 
 	/* Load uncompressed data (Must be 4-byte aligned) */
-1:	RCALL	flash_txrx_word
+1:	callr	r_flash_word
 	stw		r_spim_read, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 4
 	bltu	r_p_paddr, r_paddr_fend, 1b
@@ -347,44 +346,44 @@ start_program:
 	jmp		r_e_entry
 
 #if defined(SWI_FLASH_BOOT_DECOMPRESS_LZ4)
-#define r_lz4_15		r12
-#define r_lz4_255		r13
-#define r_lz4_lit		r14
-#define r_lz4_match		r15
-#define r_lz4_window	r16
+#define r_lz4_15		r13
+#define r_lz4_255		r14
+#define r_lz4_lit		r15
+#define r_lz4_match		r16
+#define r_lz4_window	r17
 decompress_lz4:
 	/* Initialize constants */
 	MOVI32	r_lz4_255, 255
 	MOVI32	r_lz4_15, 15
 1:	/* Read token */
-	RCALL	flash_txrx_byte
+	callr	r_flash_byte
 	/* Read literal length */
 	srli	r_lz4_lit, r_temp, 4
 	/* Read match length (-4) */
 	and		r_lz4_match, r_temp, r_lz4_15
 	bne		r_lz4_lit, r_lz4_15, 3f
 2:	/* Read additional literal length */
-	RCALL	flash_txrx_byte
+	callr	r_flash_byte
 	add		r_lz4_lit, r_lz4_lit, r_temp
 	beq		r_temp, r_lz4_255, 2b
 3:	/* Read literal */
 	add		r_lz4_lit, r_lz4_lit, r_p_paddr
 	beq		r_p_paddr, r_lz4_lit, 5f
-4:	RCALL	flash_txrx_byte
+4:	callr	r_flash_byte
 	stb		r_temp, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 1
 	bltu	r_p_paddr, r_lz4_lit, 4b
 	/* Stop decompression if the destination reaches the end */
 	beq		r_p_paddr, r_paddr_mend, next_program_header
 5:	/* Read offset and calc window position */
-	RCALL	flash_txrx_byte
+	callr	r_flash_byte
 	sub		r_lz4_window, r_p_paddr, r_temp
-	RCALL	flash_txrx_byte
+	callr	r_flash_byte
 	slli	r_temp, r_temp, 8
 	sub		r_lz4_window, r_lz4_window, r_temp
 	bne		r_lz4_match, r_lz4_15, 7f
 6:	/* Read additional match length */
-	RCALL	flash_txrx_byte
+	callr	r_flash_byte
 	add		r_lz4_match, r_lz4_match, r_temp
 	beq		r_temp, r_lz4_255, 6b
 7:	/* Adjust match length */
@@ -411,7 +410,7 @@ flash_close:
 	andi	r_temp, r_temp, PERIDOT_SWI_FLASH_RDY_MSK
 	beq		r_temp, r_zero, flash_close
 	stwio	r_zero, 0(r_spim_base)
-	RRET
+	ret
 
 /*
  * flash_txrx_word - TX and RX 4 bytes (Must be called by RCALL)
@@ -428,7 +427,7 @@ flash_txrx_word:
 	roli	r_spim_read, r_spim_read, 24
 	addi	r_spim_count, r_spim_count, -1
 	bne		r_spim_count, r_zero, 1b
-	RRET
+	ret
 
 /*
  * flash_txrx_byte - TX and RX 1 byte (Must be called by RCALL)
@@ -437,7 +436,7 @@ flash_txrx_word:
  */
 flash_txrx_byte:
 	FLASH_TXRX r_zero, r_temp
-	RRET
+	ret
 
 #if defined(SWI_FLASH_BOOT_AFTER_CFG)
 /*
@@ -461,7 +460,7 @@ extract_bit5s:
 	srli	r_temp, r_temp, 5
 	andi	r_spim_read, r_temp, 0xf
 	/* 0000000000000000000000000000ABCD (r_spim_read) */
-	RRET
+	ret
 #endif  /* SWI_FLASH_BOOT_AFTER_CFG */
 
 	.long	_alt_partition_ipl_start
