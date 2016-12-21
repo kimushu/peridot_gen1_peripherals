@@ -42,9 +42,9 @@
 #define ET_EXEC				2
 #define EM_NIOS2			0x71
 #define PT_LOAD				1
-#define PT_LOPROC			0x70000000
-#define PT_LOAD_LZSS		(PT_LOPROC|0x10000)
-#define PT_LOAD_LZ4			(PT_LOPROC|0x20000)
+#define PT_LOCOMP			0x63700000
+#define PT_COMP_LZ4			(PT_LOCOMP|0x100)
+#define PT_LOAD_LZ4			(PT_COMP_LZ4|PT_LOAD)
 
 #define CMD_READ_BYTES			0x03
 #define CMD_READ_SILICON_ID		0xab
@@ -290,10 +290,6 @@ load_program_header:
 	RCALL	flash_close
 
 	RCALL	flash_txrx_word			/* opcode and address */
-#if defined(SWI_FLASH_BOOT_DECOMPRESS_LZSS)
-	MOVI32	r_temp, PT_LOAD_LZSS
-	beq		r_temp, r_p_type, decompress_lzss
-#endif	/* SWI_FLASH_BOOT_DECOMPRESS_LZSS */
 #if defined(SWI_FLASH_BOOT_DECOMPRESS_LZ4)
 	MOVI32	r_temp, PT_LOAD_LZ4
 	beq		r_temp, r_p_type, decompress_lz4
@@ -321,26 +317,24 @@ next_program_header:
 	bne		r_e_phnum, r_zero, load_program_header
 
 start_program:
+#if (NIOS2_DCACHE_SIZE > 0x0)
 	/* Flush all data cache */
 	MOVI32	r_temp, NIOS2_DCACHE_SIZE
 1:	addi	r_temp, r_temp, -32
 	flushd	0(r_temp)
 	bne		r_temp, r_zero, 1b
+#endif  /* NIOS2_DCACHE_SIZE > 0 */
 
+#if (NIOS2_ICACHE_SIZE > 0x0)
 	/* Flush all instruction cache */
 	MOVI32	r_temp, NIOS2_ICACHE_SIZE
 1:	addi	r_temp, r_temp, -32
 	flushi	r_temp
 	bne		r_temp, r_zero, 1b
+#endif  /* NIOS2_ICACHE_SIZE > 0 */
 	flushp
 
 	jmp		r_e_entry
-
-#if defined(SWI_FLASH_BOOT_DECOMPRESS_LZSS)
-#error LZSS decompressor is not implemented
-decompress_lzss:
-	br		halt
-#endif	/* SWI_FLASH_BOOT_DECOMPRESS_LZSS */
 
 #if defined(SWI_FLASH_BOOT_DECOMPRESS_LZ4)
 #define r_lz4_15		r12
@@ -370,14 +364,14 @@ decompress_lz4:
 	stb		r_temp, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 1
 	bltu	r_p_paddr, r_lz4_lit, 4b
+	/* Stop decompression if the destination reaches the end */
+	beq		r_p_paddr, r_paddr_mend, next_program_header
 5:	/* Read offset and calc window position */
-	/* (if offset == 0, stop decompressing) */
 	RCALL	flash_txrx_byte
 	sub		r_lz4_window, r_p_paddr, r_temp
 	RCALL	flash_txrx_byte
 	slli	r_temp, r_temp, 8
 	sub		r_lz4_window, r_lz4_window, r_temp
-	beq		r_lz4_window, r_p_paddr, fill_remainder_area
 	bne		r_lz4_match, r_lz4_15, 7f
 6:	/* Read additional match length */
 	RCALL	flash_txrx_byte
