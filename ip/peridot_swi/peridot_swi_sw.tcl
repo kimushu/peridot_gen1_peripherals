@@ -34,6 +34,7 @@ add_sw_property supported_bsp_type TINYTH
 
 # Settings
 add_sw_setting boolean_define_only system_h_define flash_boot.enable SWI_FLASH_BOOT_ENABLE 0 "Enable boot from flash (ALT_ALLOW_CODE_RESET must be disabled)"
+add_sw_setting boolean_define_only system_h_define flash_boot.detect_gdb SWI_FLASH_BOOT_DETECT_GDB 0 "Enable GDB detection (This is a workaround for wrong download by gdb when you are using tightly-coupled memory at reset region)"
 add_sw_setting boolean_define_only system_h_define flash_boot.after_cfg SWI_FLASH_BOOT_AFTER_CFG 0 "Load ELF image after FPGA configuration data"
 add_sw_setting hex_number system_h_define flash_boot.offset SWI_FLASH_BOOT_OFFSET 0 "Load offset in bytes"
 #add_sw_setting boolean_define_only system_h_define flash_boot.decompress.lzss SWI_FLASH_BOOT_DECOMPRESS_LZSS 0 "Enable decompression with LZSS algorithm"

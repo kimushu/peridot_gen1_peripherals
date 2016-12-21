@@ -123,6 +123,9 @@
 	.global __reset_swi
 	.type __reset_swi, @function
 __reset_swi:
+#ifdef SWI_FLASH_BOOT_DETECT_GDB
+	nextpc	r3
+#endif
 #if (NIOS2_ICACHE_SIZE > 0x0)
 	MOVI32	r2, NIOS2_ICACHE_SIZE
 0:
@@ -132,9 +135,7 @@ __reset_swi:
 #endif  /* NIOS2_ICACHE_SIZE > 0 */
 
 #ifdef SWI_FLASH_BOOT_ENABLE
-	movhi	r1, %hi(__loader)
-	ori		r1, r1, %lo(__loader)
-	jmp		r1
+	br		__loader
 #else   /* SWI_FLASH_BOOT_ENABLE */
 	movhi	r1, %hi(_start)
 	ori		r1, r1, %lo(_start)
@@ -154,6 +155,15 @@ __reset_swi:
 __loader:
 	/* Clear processor status (Disable interrupts) */
 	wrctl	status, r_zero
+
+#ifdef SWI_FLASH_BOOT_DETECT_GDB
+	cmpeqi	r3, r3, 4
+	beq		r_zero, r3, 1f
+	movhi	r1, %hi(_start)
+	ori		r1, r1, %lo(_start)
+	jmp		r1
+1:
+#endif
 
 	/* Get register base */
 	MOVI32	r_spim_base, (SWI_BASE + PERIDOT_SWI_FLASH_REG * 4)
@@ -304,9 +314,9 @@ load_program_header:
 	bltu	r_p_paddr, r_paddr_fend, 1b
 	br		fill_remainder_area
 
-	/* Fill remainder area (Must be 4-byte aligned) */
-1:	stw		r_zero, 0(r_p_paddr)
-	addi	r_p_paddr, r_p_paddr, 4
+	/* Fill remainder area */
+1:	stb		r_zero, 0(r_p_paddr)
+	addi	r_p_paddr, r_p_paddr, 1
 fill_remainder_area:
 	bltu	r_p_paddr, r_paddr_mend, 1b
 
