@@ -403,7 +403,7 @@ halt:
 1:	br		1b
 
 /*
- * flash_close - Stop CS# output (Must be called by RCALL)
+ * flash_close - Stop CS# output
  */
 flash_close:
 	ldwio	r_temp, 0(r_spim_base)
@@ -413,7 +413,7 @@ flash_close:
 	ret
 
 /*
- * flash_txrx_word - TX and RX 4 bytes (Must be called by RCALL)
+ * flash_txrx_word - TX and RX 4 bytes
  *   Input:  r_spim_write - TX data (MSB first, big-endian)
  *   Output: r_spim_read  - RX data (MSB first, little-endian)
  */
@@ -430,7 +430,7 @@ flash_txrx_word:
 	ret
 
 /*
- * flash_txrx_byte - TX and RX 1 byte (Must be called by RCALL)
+ * flash_txrx_byte - TX and RX 1 byte
  *   Input:  r_zero - TX data (Fixed to 0x00)
  *   Output: r_temp - RX data
  */
@@ -440,7 +440,7 @@ flash_txrx_byte:
 
 #if defined(SWI_FLASH_BOOT_AFTER_CFG)
 /*
- * extract_bit5s - Extract bit5 of each byte (Must be called by RCALL)
+ * extract_bit5s - Extract bit5 of each byte
  *   Input:  r_spim_read (0b**A*****_**B*****_**C*****_**D*****)
  *   Output: r_spim_read (0b00000000_00000000_00000000_0000ABCD)
  */
