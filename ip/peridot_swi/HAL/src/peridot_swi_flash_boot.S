@@ -26,14 +26,14 @@
 #define r_p_paddr		r10	/* (p_paddr) */
 #define r_paddr_fend	r11	/* (p_paddr + p_filesz) */
 #define r_paddr_mend	r12	/* (p_paddr + p_memsz) */
-#define r_spim_count	r13	/* Used in flash_txrx_word */
-#define r_spim_read		r14	/* Used in flash_txrx_word */
+#define r_spim_read		r13	/* Used in flash_txrx_word/flash_rxtx_byte */
+#define r_spim_count	r14	/* Used in flash_txrx_word */
 #define r_spim_write	r15	/* Used in flash_txrx_word */
 
 #define r_p_type		r16	/* (p_type) */
 /*
  * r16-r30 : Free area for decompressor
- * (If decompressor does not use flash_txrx_word, r13-r15 are also free)
+ * (If decompressor does not use flash_txrx_word, r14-r15 are also free)
  */
 
 /*----------------------------------------------------------------
@@ -91,15 +91,21 @@
 .endm
 
 /*
- * Send and receive one byte
+ * Send one byte
  */
-.macro FLASH_TXRX rTX,rRX
+.macro FLASH_TX rTX
 99:	ldwio	r_temp, 0(r_spim_base)
 	andi	r_temp, r_temp, PERIDOT_SWI_FLASH_RDY_MSK
 	beq		r_temp, r_zero, 99b
 	andi	r_temp, \rTX, PERIDOT_SWI_FLASH_TXDATA_MSK
 	ori		r_temp, r_temp, PERIDOT_SWI_FLASH_SS_MSK | PERIDOT_SWI_FLASH_STA_MSK
 	stwio	r_temp, 0(r_spim_base)
+.endm
+
+/*
+ * Receive one byte
+ */
+.macro FLASH_RX rRX
 99:	ldwio	r_temp, 0(r_spim_base)
 	andi	r_temp, r_temp, PERIDOT_SWI_FLASH_RDY_MSK
 	beq		r_temp, r_zero, 99b
@@ -164,7 +170,7 @@ __loader:
 
 	/* Calculate function pointers */
 	nextpc	r_temp
-1:	addi	r_flash_byte, r_temp, (flash_txrx_byte - 1b)
+1:	addi	r_flash_byte, r_temp, (flash_rxtx_byte - 1b)
 	addi	r_flash_word, r_temp, (flash_txrx_word - 1b)
 
 	RCALL	flash_close
@@ -346,46 +352,47 @@ start_program:
 	jmp		r_e_entry
 
 #if defined(SWI_FLASH_BOOT_DECOMPRESS_LZ4)
-#define r_lz4_15		r13
-#define r_lz4_255		r14
-#define r_lz4_lit		r15
-#define r_lz4_match		r16
-#define r_lz4_window	r17
+#define r_lz4_15		r14
+#define r_lz4_255		r15
+#define r_lz4_lit		r16
+#define r_lz4_match		r17
+#define r_lz4_window	r18
 decompress_lz4:
+	FLASH_TX r_zero
 	/* Initialize constants */
 	MOVI32	r_lz4_255, 255
 	MOVI32	r_lz4_15, 15
 1:	/* Read token */
 	callr	r_flash_byte
 	/* Read literal length */
-	srli	r_lz4_lit, r_temp, 4
+	srli	r_lz4_lit, r_spim_read, 4
 	/* Read match length (-4) */
-	and		r_lz4_match, r_temp, r_lz4_15
+	and		r_lz4_match, r_spim_read, r_lz4_15
 	bne		r_lz4_lit, r_lz4_15, 3f
 2:	/* Read additional literal length */
 	callr	r_flash_byte
-	add		r_lz4_lit, r_lz4_lit, r_temp
-	beq		r_temp, r_lz4_255, 2b
+	add		r_lz4_lit, r_lz4_lit, r_spim_read
+	beq		r_spim_read, r_lz4_255, 2b
 3:	/* Read literal */
 	add		r_lz4_lit, r_lz4_lit, r_p_paddr
 	beq		r_p_paddr, r_lz4_lit, 5f
 4:	callr	r_flash_byte
-	stb		r_temp, 0(r_p_paddr)
+	stb		r_spim_read, 0(r_p_paddr)
 	addi	r_p_paddr, r_p_paddr, 1
 	bltu	r_p_paddr, r_lz4_lit, 4b
 	/* Stop decompression if the destination reaches the end */
 	beq		r_p_paddr, r_paddr_mend, next_program_header
 5:	/* Read offset and calc window position */
 	callr	r_flash_byte
-	sub		r_lz4_window, r_p_paddr, r_temp
+	sub		r_lz4_window, r_p_paddr, r_spim_read
 	callr	r_flash_byte
-	slli	r_temp, r_temp, 8
-	sub		r_lz4_window, r_lz4_window, r_temp
+	slli	r_spim_read, r_spim_read, 8
+	sub		r_lz4_window, r_lz4_window, r_spim_read
 	bne		r_lz4_match, r_lz4_15, 7f
 6:	/* Read additional match length */
 	callr	r_flash_byte
-	add		r_lz4_match, r_lz4_match, r_temp
-	beq		r_temp, r_lz4_255, 6b
+	add		r_lz4_match, r_lz4_match, r_spim_read
+	beq		r_spim_read, r_lz4_255, 6b
 7:	/* Adjust match length */
 	addi	r_lz4_match, r_lz4_match, 4
 	/* Output matched data */
@@ -406,9 +413,9 @@ halt:
  * flash_close - Stop CS# output
  */
 flash_close:
-	ldwio	r_temp, 0(r_spim_base)
+1:	ldwio	r_temp, 0(r_spim_base)
 	andi	r_temp, r_temp, PERIDOT_SWI_FLASH_RDY_MSK
-	beq		r_temp, r_zero, flash_close
+	beq		r_temp, r_zero, 1b
 	stwio	r_zero, 0(r_spim_base)
 	ret
 
@@ -422,7 +429,8 @@ flash_txrx_word:
 	MOVI32	r_spim_count, 4
 	mov		r_spim_read, r_zero
 1:	roli	r_spim_write, r_spim_write, 8
-	FLASH_TXRX r_spim_write, r_temp
+	FLASH_TX r_spim_write
+	FLASH_RX r_temp
 	or		r_spim_read, r_spim_read, r_temp
 	roli	r_spim_read, r_spim_read, 24
 	addi	r_spim_count, r_spim_count, -1
@@ -430,12 +438,13 @@ flash_txrx_word:
 	ret
 
 /*
- * flash_txrx_byte - TX and RX 1 byte
- *   Input:  r_zero - TX data (Fixed to 0x00)
- *   Output: r_temp - RX data
+ * flash_rxtx_byte - RX and TX one byte
+ *   Input:  r_zero      - TX data (Fixed to 0x00)
+ *   Output: r_spim_read - RX data
  */
-flash_txrx_byte:
-	FLASH_TXRX r_zero, r_temp
+flash_rxtx_byte:
+	FLASH_RX r_spim_read
+	FLASH_TX r_zero
 	ret
 
 #if defined(SWI_FLASH_BOOT_AFTER_CFG)
