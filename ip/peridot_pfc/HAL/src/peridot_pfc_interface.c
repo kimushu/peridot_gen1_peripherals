@@ -17,7 +17,8 @@ alt_u32 peridot_pfc_interface_direct_input(alt_u32 pin)
 void peridot_pfc_interface_direct_output(alt_u32 pin, alt_u32 value)
 {
 	IOWR_PERIDOT_PFC_DIROUT(pfc_base, (pin >> PERIDOT_PFC_BANK_SHIFT),
-			(1u << (PERIDOT_PFC_DIROUT_MASK_OFST + (pin & PERIDOT_PFC_BANK_MASK))) |
+			((~1u << (PERIDOT_PFC_DIROUT_MASK_OFST + (pin & PERIDOT_PFC_BANK_MASK))) &
+				PERIDOT_PFC_DIROUT_MASK_MSK) |
 			(value ? (1u << (PERIDOT_PFC_DIROUT_DOUT_OFST + (pin & PERIDOT_PFC_BANK_MASK))) : 0));
 }
 
