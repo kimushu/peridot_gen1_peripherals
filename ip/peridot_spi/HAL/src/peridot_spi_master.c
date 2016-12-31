@@ -71,7 +71,8 @@ int peridot_spi_master_configure_pins(peridot_spi_master_state *sp,
           peridot_pfc_interface_select_output(mosi, mosi_func);
         }
         peridot_pfc_interface_select_input(miso_pfc_map->in_bank, miso_pfc_map->in_func,
-                                           (miso < 0) ? 1 : miso_pin);
+                                           (miso < 0) ?
+                                           PERIDOT_PFC_INPUT_FUNCX_HIGH : miso_pin);
       }
       return 0;
     }
@@ -231,7 +232,7 @@ int peridot_spi_master_transfer(peridot_spi_master_state *sp,
 {
   int result;
 
-  if ((slave>= sizeof(sp->ss_n_pfc_map->out_funcs)) ||
+  if ((slave >= sizeof(sp->ss_n_pfc_map->out_funcs)) ||
       ((slave >= 0) && (sp->ss_n_pfc_map->out_funcs[slave] < 0)))
   {
     return -EINVAL;
