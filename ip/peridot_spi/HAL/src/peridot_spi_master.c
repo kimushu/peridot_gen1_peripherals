@@ -13,7 +13,6 @@ static void peridot_spi_master_irq(void *context, alt_u32 id)
 {
   peridot_spi_master_state *sp = (peridot_spi_master_state *)context;
 
-  sp->slave_locked = -1;
   alt_ic_irq_disable(sp->irq_controller_id, sp->irq);
 #ifdef __tinythreads__
   sem_post(&sp->done);
@@ -31,9 +30,7 @@ void peridot_spi_master_init(peridot_spi_master_state *sp)
   sp->lock = 0;
   sp->done = 0;
 #endif
-
-  /* Enable reset */
-  IOWR_PERIDOT_SPI_CONFIG(sp->base, PERIDOT_SPI_CONFIG_CLKDIV_MSK);
+  sp->slave_locked = -1;
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
   alt_ic_isr_register(sp->irq_controller_id, sp->irq, peridot_spi_master_irq, sp, NULL);
@@ -64,6 +61,10 @@ int peridot_spi_master_configure_pins(peridot_spi_master_state *sp,
     {
       if (!dry_run)
       {
+        if (sp->slave_locked >= 0)
+        {
+          return -EAGAIN;
+        }
         peridot_pfc_interface_select_output(sclk, sclk_func);
         if (mosi >= 0)
         {
