@@ -1,4 +1,5 @@
 #include "alt_types.h"
+#include "peridot_pfc_interface.h"
 #include "peridot_pfc_interface_regs.h"
 
 static alt_u32 pfc_base;

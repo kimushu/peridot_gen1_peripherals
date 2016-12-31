@@ -35,8 +35,12 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp)
   IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_RST_MSK | PERIDOT_I2C_CONFIG_CLKDIV_MSK);
 
   /* Connect inputs to '1' */
-  peridot_pfc_interface_select_input(sp->scl_pfc_map->in_bank, sp->scl_pfc_map->in_func, 1);
-  peridot_pfc_interface_select_input(sp->sda_pfc_map->in_bank, sp->sda_pfc_map->in_func, 1);
+  peridot_pfc_interface_select_input(sp->scl_pfc_map->in_bank,
+                                     sp->scl_pfc_map->in_func,
+                                     PERIDOT_PFC_INPUT_FUNCX_HIGH);
+  peridot_pfc_interface_select_input(sp->sda_pfc_map->in_bank,
+                                     sp->sda_pfc_map->in_func,
+                                     PERIDOT_PFC_INPUT_FUNCX_HIGH);
 
   /* Clear reset */
   IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_CLKDIV_MSK);
