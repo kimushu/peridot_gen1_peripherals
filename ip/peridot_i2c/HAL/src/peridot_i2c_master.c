@@ -58,8 +58,8 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp)
 int peridot_i2c_master_configure_pins(peridot_i2c_master_state *sp,
                                       alt_u32 scl, alt_u32 sda, int dry_run)
 {
-  const peridot_pfc_map *const scl_pfc_map = sp->scl_pfc_map;
-  const peridot_pfc_map *const sda_pfc_map = sp->sda_pfc_map;
+  const peridot_pfc_map_io *const scl_pfc_map = sp->scl_pfc_map;
+  const peridot_pfc_map_io *const sda_pfc_map = sp->sda_pfc_map;
 
   if ((scl < sizeof(scl_pfc_map->out_funcs)) &&
       (scl_pfc_map->in_bank >= 0) &&

@@ -18,8 +18,8 @@ typedef struct peridot_i2c_master_state_s
   alt_u32 freq;
   alt_u32 irq_controller_id;
   alt_u32 irq;
-  const struct peridot_pfc_map_s *scl_pfc_map;
-  const struct peridot_pfc_map_s *sda_pfc_map;
+  const struct peridot_pfc_map_io_s *scl_pfc_map;
+  const struct peridot_pfc_map_io_s *sda_pfc_map;
 #ifdef __tinythreads__
   pthread_mutex_t lock;
   sem_t done;
@@ -31,8 +31,8 @@ typedef struct peridot_i2c_master_state_s
 peridot_i2c_master_state;
 
 #define PERIDOT_I2C_MASTER_STATE_INSTANCE(name, state) \
-  extern const struct peridot_pfc_map_s state##_scl_pfc_map;\
-  extern const struct peridot_pfc_map_s state##_sda_pfc_map;\
+  extern const struct peridot_pfc_map_io_s state##_scl_pfc_map;\
+  extern const struct peridot_pfc_map_io_s state##_sda_pfc_map;\
   peridot_i2c_master_state state =      \
   {                                     \
     #name,                              \

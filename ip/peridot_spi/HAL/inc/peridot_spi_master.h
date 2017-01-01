@@ -18,10 +18,10 @@ typedef struct peridot_spi_master_state_s
   alt_u32 freq;
   alt_u32 irq_controller_id;
   alt_u32 irq;
-  const struct peridot_pfc_map_s *ss_n_pfc_map;
-  const struct peridot_pfc_map_s *sclk_pfc_map;
-  const struct peridot_pfc_map_s *mosi_pfc_map;
-  const struct peridot_pfc_map_s *miso_pfc_map;
+  const struct peridot_pfc_map_out_s *ss_n_pfc_map;
+  const struct peridot_pfc_map_out_s *sclk_pfc_map;
+  const struct peridot_pfc_map_out_s *mosi_pfc_map;
+  const struct peridot_pfc_map_in_s  *miso_pfc_map;
   alt_8 slave_locked;
 #ifdef __tinythreads__
   pthread_mutex_t lock;
@@ -34,10 +34,10 @@ typedef struct peridot_spi_master_state_s
 peridot_spi_master_state;
 
 #define PERIDOT_SPI_MASTER_STATE_INSTANCE(name, state) \
-  extern const struct peridot_pfc_map_s state##_ss_n_pfc_map;\
-  extern const struct peridot_pfc_map_s state##_sclk_pfc_map;\
-  extern const struct peridot_pfc_map_s state##_mosi_pfc_map;\
-  extern const struct peridot_pfc_map_s state##_miso_pfc_map;\
+  extern const struct peridot_pfc_map_out_s state##_ss_n_pfc_map;\
+  extern const struct peridot_pfc_map_out_s state##_sclk_pfc_map;\
+  extern const struct peridot_pfc_map_out_s state##_mosi_pfc_map;\
+  extern const struct peridot_pfc_map_in_s  state##_miso_pfc_map;\
   peridot_spi_master_state state =      \
   {                                     \
     #name,                              \

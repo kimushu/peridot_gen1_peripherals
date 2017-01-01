@@ -42,9 +42,9 @@ void peridot_spi_master_init(peridot_spi_master_state *sp)
 int peridot_spi_master_configure_pins(peridot_spi_master_state *sp,
                                       alt_u32 sclk, alt_32 mosi, alt_32 miso, int dry_run)
 {
-  const peridot_pfc_map *const sclk_pfc_map = sp->sclk_pfc_map;
-  const peridot_pfc_map *const mosi_pfc_map = sp->mosi_pfc_map;
-  const peridot_pfc_map *const miso_pfc_map = sp->miso_pfc_map;
+  const peridot_pfc_map_out *const sclk_pfc_map = sp->sclk_pfc_map;
+  const peridot_pfc_map_out *const mosi_pfc_map = sp->mosi_pfc_map;
+  const peridot_pfc_map_in  *const miso_pfc_map = sp->miso_pfc_map;
 
   if ((sclk < sizeof(sclk_pfc_map->out_funcs)) &&
       ((mosi < 0) || (mosi < sizeof(mosi_pfc_map->out_funcs))) &&

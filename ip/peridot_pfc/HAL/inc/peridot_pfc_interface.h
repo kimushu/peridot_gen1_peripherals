@@ -7,14 +7,28 @@
 extern "C" {
 #endif
 
-typedef struct peridot_pfc_map_s
+typedef struct peridot_pfc_map_io_s
 {
   alt_8 out_funcs[32];
   alt_8 in_bank;
   alt_8 in_func;
   alt_8 in_pins[32];
 }
-peridot_pfc_map;
+peridot_pfc_map_io;
+
+typedef struct peridot_pfc_map_in_s
+{
+  alt_8 in_bank;
+  alt_8 in_func;
+  alt_8 in_pins[32];
+}
+peridot_pfc_map_in;
+
+typedef struct peridot_pfc_map_out_s
+{
+  alt_8 out_funcs[32];
+}
+peridot_pfc_map_out;
 
 #define PERIDOT_PFC_OUTPUT_PINX_MSK         (0xf)
 #define PERIDOT_PFC_OUTPUT_PINX_WIDTH       (4)
