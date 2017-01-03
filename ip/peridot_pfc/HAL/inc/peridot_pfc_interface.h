@@ -30,6 +30,13 @@ typedef struct peridot_pfc_map_out_s
 }
 peridot_pfc_map_out;
 
+typedef struct peridot_pfc_map_out_ch_s
+{
+  alt_8 out_funcs[32];
+  alt_8 out_channels[32];
+}
+peridot_pfc_map_out_ch;
+
 #define PERIDOT_PFC_OUTPUT_PINX_MSK         (0xf)
 #define PERIDOT_PFC_OUTPUT_PINX_WIDTH       (4)
 #define PERIDOT_PFC_OUTPUT_PINX_HIZ         (0x0)
