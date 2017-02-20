@@ -1,7 +1,9 @@
 PERIDOTペリフェラル集
 =====================
 
-PERIDOTコンフィグレーションで使用している標準ペリフェラル集です。
+## PERIDOT New Generationsリリースにより、こちらのリポジトリのメンテナンスは終了します。  
+
+Qsys 16.1以降用のペリフェラルは[peridot_peripherals](https://github.com/osafune/peridot_peripherals)リポジトリをご利用下さい。
 
 
 対象となるツール
