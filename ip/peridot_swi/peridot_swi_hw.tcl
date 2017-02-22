@@ -41,6 +41,8 @@ set_fileset_property QUARTUS_SYNTH TOP_LEVEL peridot_swi
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
 add_fileset_file peridot_swi.v VERILOG PATH peridot_swi.v TOP_LEVEL_FILE
+add_fileset_file peridot_spi.v VERILOG PATH peridot_spi.v
+add_fileset_file altchip_id.v VERILOG PATH altchip_id.v
 
 
 # 
