@@ -3,7 +3,10 @@
 #include "sys/alt_irq.h"
 #include "peridot_i2c_master.h"
 #include "peridot_i2c_regs.h"
+#include "system.h"
+#ifdef __PERIDOT_PFC_INTERFACE
 #include "peridot_pfc_interface.h"
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
 static void peridot_i2c_master_irq(void *context)
@@ -34,6 +37,7 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp)
   /* Enable reset */
   IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_RST_MSK | PERIDOT_I2C_CONFIG_CLKDIV_MSK);
 
+#ifdef __PERIDOT_PFC_INTERFACE
   /* Connect inputs to '1' */
   peridot_pfc_interface_select_input(sp->scl_pfc_map->in_bank,
                                      sp->scl_pfc_map->in_func,
@@ -41,6 +45,7 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp)
   peridot_pfc_interface_select_input(sp->sda_pfc_map->in_bank,
                                      sp->sda_pfc_map->in_func,
                                      PERIDOT_PFC_INPUT_FUNCX_HIGH);
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
   /* Clear reset */
   IOWR_PERIDOT_I2C_CONFIG(sp->base, PERIDOT_I2C_CONFIG_CLKDIV_MSK);
@@ -55,6 +60,7 @@ void peridot_i2c_master_init(peridot_i2c_master_state *sp)
 #endif
 }
 
+#ifdef __PERIDOT_PFC_INTERFACE
 int peridot_i2c_master_configure_pins(peridot_i2c_master_state *sp,
                                       alt_u32 scl, alt_u32 sda, int dry_run)
 {
@@ -89,6 +95,7 @@ int peridot_i2c_master_configure_pins(peridot_i2c_master_state *sp,
   }
   return -ENOTSUP;
 }
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 int peridot_i2c_master_get_clkdiv(peridot_i2c_master_state *sp, alt_u32 bitrate, alt_u32 *clkdiv)
 {

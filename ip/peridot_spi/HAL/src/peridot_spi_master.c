@@ -3,7 +3,10 @@
 #include "sys/alt_irq.h"
 #include "peridot_spi_master.h"
 #include "peridot_spi_regs.h"
+#include "system.h"
+#ifdef __PERIDOT_PFC_INTERFACE
 #include "peridot_pfc_interface.h"
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
 static void peridot_spi_master_irq(void *context)
@@ -39,6 +42,7 @@ void peridot_spi_master_init(peridot_spi_master_state *sp)
 #endif
 }
 
+#ifdef __PERIDOT_PFC_INTERFACE
 int peridot_spi_master_configure_pins(peridot_spi_master_state *sp,
                                       alt_u32 sclk, alt_32 mosi, alt_32 miso, int dry_run)
 {
@@ -79,6 +83,7 @@ int peridot_spi_master_configure_pins(peridot_spi_master_state *sp,
   }
   return -ENOTSUP;
 }
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 int peridot_spi_master_get_clkdiv(peridot_spi_master_state *sp, alt_u32 bitrate, alt_u32 *clkdiv)
 {
@@ -130,11 +135,13 @@ static int transfer(peridot_spi_master_state *sp,
     return -EAGAIN;
   }
 
+#ifdef __PERIDOT_PFC_INTERFACE
   if (slave >= 0)
   {
     /* Connect ss_n output to the slave */
     peridot_pfc_interface_select_output(slave, sp->ss_n_pfc_map->out_funcs[slave]);
   }
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
   /* Wait for ready */
   while ((IORD_PERIDOT_SPI_ACCESS(base) & PERIDOT_SPI_ACCESS_RDY_MSK) == 0);
@@ -216,8 +223,10 @@ static int transfer(peridot_spi_master_state *sp,
   {
     /* Negate slave select */
     IOWR_PERIDOT_SPI_ACCESS(base, 0);
+#ifdef __PERIDOT_PFC_INTERFACE
     peridot_pfc_interface_direct_output(slave, 1);
     peridot_pfc_interface_select_output(slave, PERIDOT_PFC_OUTPUT_PINX_DOUT);
+#endif  /* __PERIDOT_PFC_INTERFACE */
     sp->slave_locked = -1;
   }
 
@@ -232,11 +241,13 @@ int peridot_spi_master_transfer(peridot_spi_master_state *sp,
 {
   int result;
 
+#ifdef __PERIDOT_PFC_INTERFACE
   if ((slave >= sizeof(sp->ss_n_pfc_map->out_funcs)) ||
       ((slave >= 0) && (sp->ss_n_pfc_map->out_funcs[slave] < 0)))
   {
     return -EINVAL;
   }
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 #ifdef __tinythreads__
   pthread_mutex_lock(&sp->lock);

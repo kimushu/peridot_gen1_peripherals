@@ -3,7 +3,10 @@
 #include "alt_types.h"
 #include "peridot_servo.h"
 #include "peridot_servo_regs.h"
+#include "system.h"
+#ifdef __PERIDOT_PFC_INTERFACE
 #include "peridot_pfc_interface.h"
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 static peridot_servo_state *servo_sp;
 
@@ -32,6 +35,7 @@ int peridot_servo_disable_all(void)
   return 0;
 }
 
+#ifdef __PERIDOT_PFC_INTERFACE
 static int peridot_servo_configure(const peridot_pfc_map_out_ch *pfc_map,
                                    alt_u32 pin, int dry_run)
 {
@@ -67,6 +71,7 @@ int peridot_servo_configure_dsm(alt_u32 pin, int dry_run)
   }
   return peridot_servo_configure(servo_sp->dsm_pfc_map, pin, dry_run);
 }
+#endif  /* __PERIDOT_PFC_INTERFACE */
 
 int peridot_servo_set_value(alt_u32 pin, alt_u8 value)
 {

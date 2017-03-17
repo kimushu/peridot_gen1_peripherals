@@ -16,6 +16,13 @@ proc class_generation { args } {
 	}
 
 	puts "INFO: SWI flash boot is enabled."
+
+	if { [ get_section_mapping .ipl ] == "" } {
+		puts "ERROR: .ipl section is required to use SWI flash boot."
+		puts "ERROR: Add .ipl section in `Linker Script' page of BSP Editor."
+		return -code error
+	}
+
 	puts "INFO: Please append `$example' to your Makefile."
 	puts "INFO: You can build ELF-embedded RBF by running `combined_rbf' target"
 
