@@ -3,11 +3,11 @@
 //
 //   DEGISN : S.OSAFUNE (J-7SYSTEM Works)
 //   DATE   : 2015/04/30 -> 2015/05/23
-//   UPDATE : 2016/01/08
+//   UPDATE : 2017/02/22
 //
 // ===================================================================
 // *******************************************************************
-//   Copyright (C) 2015-2016, J-7SYSTEM Works.  All rights Reserved.
+//   Copyright (C) 2015-2017, J-7SYSTEM Works.  All rights Reserved.
 //
 // * This module is a free sourcecode and there is NO WARRANTY.
 // * No restriction on use. You can use, modify and redistribute it
@@ -127,6 +127,7 @@ module peridot_swi #(
 			rreq_reg <= 1'b0;
 			led_reg <= 1'b0;
 			irq_reg <= 1'b0;
+			message_reg <= 32'd0;
 		end
 		else begin
 			if (avs_write) begin
