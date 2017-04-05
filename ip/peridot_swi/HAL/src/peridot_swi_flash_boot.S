@@ -1,9 +1,8 @@
 #include "system.h"
+#ifdef SWI_FLASH_BOOT_ENABLE
 #include "peridot_swi_regs.h"
 #ifdef ALT_ALLOW_CODE_AT_RESET
-#ifdef SWI_FLASH_BOOT_ENABLE
 # error "You have to turn off hal.linker.allow_code_at_reset to use SWI flash boot"
-#endif  /* SWI_FLASH_BOOT_ENABLE */
 #else   /* ALT_ALLOW_CODE_AT_RESET */
 
 /*----------------------------------------------------------------
@@ -134,19 +133,12 @@ __reset_swi:
 	bgt		r2, zero, 0b
 #endif  /* NIOS2_ICACHE_SIZE > 0 */
 
-#ifdef SWI_FLASH_BOOT_ENABLE
 	br		__loader
-#else   /* SWI_FLASH_BOOT_ENABLE */
-	movhi	r1, %hi(_start)
-	ori		r1, r1, %lo(_start)
-	jmp		r1
-#endif  /* !SWI_FLASH_BOOT_ENABLE */
 
 /*----------------------------------------------------------------
  * Boot loader
  */
 
-#ifdef SWI_FLASH_BOOT_ENABLE
 	.section .ipl, "xa"
 	.align 2
 
@@ -474,5 +466,5 @@ extract_bit5s:
 
 	.long	_alt_partition_ipl_start
 
-#endif  /* SWI_FLASH_BOOT_ENABLE */
 #endif  /* !ALT_ALLOW_CODE_AT_RESET */
+#endif  /* SWI_FLASH_BOOT_ENABLE */

@@ -3,14 +3,15 @@
 #include "sys/alt_irq.h"
 #include "peridot_swi.h"
 #include "peridot_swi_regs.h"
+#include "system.h"
 
 static peridot_swi_state *swi_sp;
 
-#ifndef ALT_ALLOW_CODE_AT_RESET
+#ifdef SWI_FLASH_BOOT_ENABLE
 /* This dummy variable prevents linker from dropping startup sections */
 extern int __reset_swi;
 __attribute__((used)) static const void *peridot_swi_dummy = &__reset_swi;
-#endif
+#endif  /* SWI_FLASH_BOOT_ENABLE */
 
 #ifdef ALT_ENHANCED_INTERRUPT_API_PRESENT
 static void peridot_swi_irq(void *context)
