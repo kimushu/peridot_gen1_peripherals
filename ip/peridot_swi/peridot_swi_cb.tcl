@@ -58,8 +58,18 @@ proc class_generation { args } {
 #
 #########################################################################
 
+ifneq ($(QUARTUS_PROJECT_DIR),)
+QUARTUS_PROJECT_DIR_GUESS := $(QUARTUS_PROJECT_DIR)
+else
+ifneq ($(SOPCINFO_FILE),)
+QUARTUS_PROJECT_DIR_GUESS := $(dir $(SOPCINFO_FILE))
+else
+$(error Please define QUARTUS_PROJECT_DIR in your Makefile)
+endif
+endif
+
 ifeq ($(RBF_FILE),)
-RBF_FILE := $(firstword $(wildcard $(QUARTUS_PROJECT_DIR)/output_files/*.rbf) $(wildcard $(QUARTUS_PROJECT_DIR)/*.rbf))
+RBF_FILE := $(firstword $(wildcard $(QUARTUS_PROJECT_DIR_GUESS)/output_files/*.rbf) $(wildcard $(QUARTUS_PROJECT_DIR_GUESS)/*.rbf))
 endif
 
 ifeq ($(COMBINED_RBF),)
